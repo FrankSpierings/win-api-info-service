@@ -2,6 +2,7 @@ import json
 import re
 from os import path
 from clangd_client import ClangdClient
+from cache import Cache
 
 TEMPLATE_C_FILE = """#include "windows.h"
 int main() {
@@ -12,6 +13,7 @@ int main() {
 
 class Resolver:
     def __init__(self):
+        self._cache = Cache()
         self._client = ClangdClient()
         self._client.initialize()
         self._dummy_dir = "/tmp"
@@ -34,6 +36,10 @@ class Resolver:
         if not re.match(pattern, name):
             raise RuntimeError("Not a valid function name!")
 
+        cached = self._cache.get(name)
+        if cached:
+            return cached
+
         file_contents = TEMPLATE_C_FILE.replace("__REPLACE_ME__", name)
 
         # Send the open message
@@ -49,4 +55,6 @@ class Resolver:
         response = self._client.request_signature(self._dummy_file, line, position)
 
         signatures = response.get("result", {}).get("signatures")
+        if signatures:
+            self._cache.add(name, signatures)
         return signatures
