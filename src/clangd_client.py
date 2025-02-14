@@ -6,7 +6,7 @@ import json
 class ClangdClient:
     def __init__(self, clangd_path="clangd"):
         self.process = subprocess.Popen(
-            [clangd_path, "--log=verbose"],
+            [clangd_path],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -98,7 +98,6 @@ class ClangdClient:
         params = {
             "textDocument": {"uri": f"file://{filepath}"},
             "position": {"line": line, "character": character},
-
         }
         return self.send_request("textDocument/signatureHelp", params)
 

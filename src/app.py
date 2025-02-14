@@ -17,6 +17,16 @@ def post_data():
     }
     return jsonify(result), 200
 
+# Handle exceptions
+@app.errorhandler(Exception)
+def handle_generic_error(error):
+    response = {
+        "error": "Internal Server Error",
+        "message": str(error)
+    }
+    return jsonify(response), 500  # Return 500 Internal Server Error
+
+
 # Start the server
 if __name__ == '__main__':
     app.run('0.0.0.0', debug=True, port=4444)

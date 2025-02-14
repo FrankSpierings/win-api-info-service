@@ -1,4 +1,5 @@
 import json
+import re
 from os import path
 from clangd_client import ClangdClient
 
@@ -11,22 +12,28 @@ int main() {
 
 
 def function_parameters(requested_function):
+    pattern = r'^[a-zA-Z_][a-zA-Z0-9_]*$'
+    if not re.match(pattern, requested_function):
+        raise RuntimeError("Not a valid function name!")
+
     client = ClangdClient()
     client.initialize()
 
     # Setup the compiler
     dummy_dir = "/tmp"
     dummy_file = path.join(dummy_dir, "dummy.c")
-    compiler_commands = [
-        {
-            "directory": dummy_dir,
-            "command": f'clang -target x86_64-w64-mingw32 "{dummy_file}"',
-            "file": dummy_file,
-        }
-    ]
-
     compiler_commands_file = path.join(dummy_dir, "compile_commands.json")
-    json.dump(compiler_commands, open(compiler_commands_file, "w"))
+    if not path.exists(compiler_commands_file):
+        # Write the compiler commands file if not already on disk
+        compiler_commands = [
+            {
+                "directory": dummy_dir,
+                "command": f'clang -target x86_64-w64-mingw32 "{dummy_file}"',
+                "file": dummy_file,
+            }
+        ]        
+        json.dump(compiler_commands, open(compiler_commands_file, "w"))
+    
     file_contents = TEMPLATE_C_FILE.replace("__REPLACE_ME__", requested_function)
 
     # Send the open message

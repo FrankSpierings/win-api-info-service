@@ -5,7 +5,6 @@ This code simply abuses `clangd` with a placeholder `c` template file to request
 
 I have no idea yet if this is actually a good idea to build further on, but lets see ;)
 
-
 ### Build
 
 Build using docker
