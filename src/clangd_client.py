@@ -13,7 +13,9 @@ class ClangdClient:
             text=True
         )
         self.request_id = 1
-        self.response_queue = queue.Queue()
+        self.request_lock = threading.Lock()  # Protect request_id
+        self.response_queues = {}  # Maps request_id -> Queue
+        self.queue_lock = threading.Lock()  # Protect response_queues
         self._start_listener()
 
     def _start_listener(self):
@@ -28,25 +30,48 @@ class ClangdClient:
                     self.process.stdout.readline()  # Empty line
                     content = self.process.stdout.read(content_length)
                     response = json.loads(content)
-                    self.response_queue.put(response)
+
+                    # Match response to the correct queue
+                    if "id" in response:
+                        request_id = response["id"]
+                        with self.queue_lock:
+                            if request_id in self.response_queues:
+                                self.response_queues[request_id].put(response)
                 except Exception as e:
                     print("Error reading from clangd:", e)
                     break
-        
+
         thread = threading.Thread(target=listen, daemon=True)
         thread.start()
 
     def send_request(self, method, params):
         """Sends a request to clangd and waits for a response."""
+        with self.request_lock:
+            request_id = self.request_id
+            self.request_id += 1
+
         request = {
             "jsonrpc": "2.0",
-            "id": self.request_id,
+            "id": request_id,
             "method": method,
             "params": params
         }
-        self.request_id += 1
+
+        # Create a response queue for this request
+        response_queue = queue.Queue()
+        with self.queue_lock:
+            self.response_queues[request_id] = response_queue
+
         self._send_message(json.dumps(request))
-        return self.response_queue.get()
+
+        # Wait for the correct response
+        response = response_queue.get()
+
+        # Clean up the queue
+        with self.queue_lock:
+            del self.response_queues[request_id]
+
+        return response
 
     def send_notification(self, method, params):
         """Sends a notification (no response expected)."""
