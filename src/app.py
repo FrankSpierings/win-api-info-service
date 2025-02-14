@@ -1,8 +1,9 @@
 from flask import Flask, jsonify, request
-from resolver import function_parameters
+from resolver import Resolver
 
 # Create Flask app instance
 app = Flask(__name__)
+resolver = Resolver()
 
 # Request a function signature
 @app.route('/api/signature', methods=['POST'])
@@ -10,7 +11,7 @@ def post_data():
     print('here')
     data = request.get_json()
     name = data.get('name')
-    signatures = function_parameters(name)
+    signatures = resolver.get_signature(name)
     result = {
         "name": name,
         "signatures": signatures
